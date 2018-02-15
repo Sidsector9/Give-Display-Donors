@@ -39,28 +39,33 @@ add_action( 'give_insert_payment', 'givedd_add_anonymous_donor', 10, 2 );
  *
  * @return array Donor IDs
  */
-function givedd_get_nonanonymous_donors( $form_ids = array() ) {
+function givedd_get_nonanonymous_donors( $form_ids = array(), $show_anonymous = false ) {
 
 	/**
 	 * List of donor IDs of unanimous donors.
 	 *
 	 * @var array
 	 */
-	$donor_ids = array();
+	$payments_meta = array();
 
 	/**
 	 * Arguments to set up Payments Query.
 	 *
 	 * @var array
 	 */
-	$anon_payments_args = array(
-		'meta_query' => array(
+	$anon_payments_args = array();
+
+	/**
+	 * Don't display anonymous users at all.
+	 */
+	if ( $show_anonymous ) {
+		$anon_payments_args['meta_query'] = array(
 			array(
 				'key'     => 'give-anonymous-donor',
 				'compare' => 'NOT EXISTS'
 			),
-		)
-	);
+		);
+	}
 
 	/**
 	 * The query retrieves unanimous donors from all forms
@@ -83,11 +88,15 @@ function givedd_get_nonanonymous_donors( $form_ids = array() ) {
 	$payments = $anon_payments->get_payments();
 
 	foreach ( $payments as $payment ) {
-		$payment_id = give_get_payment_donor_id( $payment->ID );
-		if ( ! in_array( $payment_id, $donor_ids ) ) {
-			$donor_ids[] =  $payment_id;
+		$donor_id = give_get_payment_donor_id( $payment->ID );
+		if ( ! in_array( $donor_id, $payments_meta ) ) {
+			$payments_meta[] = array(
+				'payment-id' => $payment->ID,
+				'donor-id'   => $donor_id,
+				'anonymous' => give_get_payment_meta( $payment->ID, 'give-anonymous-donor' ),
+			);
 		}
 	}
 
-	return $donor_ids;
+	return $payments_meta;
 }
